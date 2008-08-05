@@ -1,4 +1,5 @@
-import math,numpy,numpy.linalg, copy
+from numpy import *
+import math, numpy.linalg, copy
 
 angular_unit = 1.0
 
@@ -11,7 +12,7 @@ def use_radians():
     angular_unit = 1.0
 
 def dot(x,y):
-    return numpy.inner(x,y)
+    return inner(x,y)
 
 def abs2(x):
     return sum(x**2)
@@ -27,20 +28,20 @@ def dual(v):
     """Return two unit vectors orthogonal to v"""
     if abs2(v) > 1e-20:
         if v[0] < 0.7:
-            n1 = normalized(orthogonalized_to(numpy.array([1,0,0],'d'),v))
+            n1 = normalized(orthogonalized_to(array([1,0,0],'d'),v))
         else:
-            n1 = normalized(orthogonalized_to(numpy.array([0,1,0],'d'),v))
-        n2 = numpy.cross(v,n1)
+            n1 = normalized(orthogonalized_to(array([0,1,0],'d'),v))
+        n2 = cross(v,n1)
         return [n1,n2]
     else:
-        return [numpy.array([1,0,0],'d'),numpy.array([0,1,0],'d')]
+        return [array([1,0,0],'d'),array([0,1,0],'d')]
 
 def qmul(q1,q2):
     """Take q1 and q2 to be quaternions, and multiply them accordingly"""
     v1 = q1[1:]
     v2 = q2[1:]
-    x = q1[0]*v2 + q2[0]*v1 + numpy.cross(v1,v2)
-    return numpy.array([q1[0]*q2[0]-dot(v1,v2),x[0],x[1],x[2]])
+    x = q1[0]*v2 + q2[0]*v1 + cross(v1,v2)
+    return array([q1[0]*q2[0]-dot(v1,v2),x[0],x[1],x[2]])
 
 def qconj(q):
     qc = -q
@@ -48,21 +49,21 @@ def qconj(q):
     return qc
 
 def qrotate(q,v):
-    qv = numpy.array([0,v[0],v[1],v[2]])
+    qv = array([0,v[0],v[1],v[2]])
     return qmul(q,qmul(qv,qconj(q)))[1:]
 
 def qrotor(axis,angle):
     axis = math.sin(angle/2)*normalized(axis)
-    return numpy.array([math.cos(angle/2), axis[0], axis[1], axis[2]])
+    return array([math.cos(angle/2), axis[0], axis[1], axis[2]])
 
 class Point:
     def __init__(self, *x_or_xyz):
         """Create a point from a list of 3 coordinates or 3 individual
         coordinates."""
         if len(x_or_xyz) == 3:
-            self.r = numpy.array(x_or_xyz,'d')
+            self.r = array(x_or_xyz,'d')
         elif len(x_or_xyz) == 1 and len(x_or_xyz[0]) == 3:
-            self.r = numpy.array(x_or_xyz[0],'d')
+            self.r = array(x_or_xyz[0],'d')
         else:
             raise TypeError("Invalid arguments to Point()")
     def moved(self, m):
@@ -97,15 +98,15 @@ class Point:
         """ % (self.r[0],self.r[1],self.r[2],radius,color)
 
 def pointset_mass_distribution(points):
-    cm = numpy.zeros((1,3))
+    cm = zeros((1,3))
     for p in points:
         cm += p.r
     cm /= len(points)
-    A = numpy.asmatrix(numpy.zeros((3,3)))
+    A = asmatrix(zeros((3,3)))
     for p in points:
-        r = numpy.asmatrix(p.r - cm)
+        r = asmatrix(p.r - cm)
         A += r.transpose()*r
-    return numpy.asarray(cm).reshape(3),A
+    return asarray(cm).reshape(3),A
 
 class Line:
     def __init__(self, *points):
@@ -117,15 +118,15 @@ class Line:
         if len(points) == 1:
             points = points[0]
         if len(points) == 2:
-            self.r = numpy.array(points[0].r)
-            self.r2 = numpy.array(points[1].r)
+            self.r = array(points[0].r)
+            self.r2 = array(points[1].r)
             self.t = normalized(self.r2 - self.r)
         elif len(points) > 2:
             r_cm, A = pointset_mass_distribution(points)
             # assume eigh() returns sorted vectors, take the one with
             # largest eigenvalue
             val, vec = numpy.linalg.eigh(A)
-            self.t = numpy.asarray(vec[:,2]).reshape(3)
+            self.t = asarray(vec[:,2]).reshape(3)
             l = math.sqrt(val[2]/2)
             self.r = r_cm
             self.r2 = r_cm + l*self.t
@@ -146,9 +147,9 @@ class Line:
             return obj.distance_to(self)
         elif isinstance(obj,Line):
             d = obj.r - self.r
-            n = numpy.cross(self.t,obj.t)
+            n = cross(self.t,obj.t)
             if abs2(n) < 1e-16: # parallel lines
-                return math.sqrt(abs2(numpy.cross(d,self.t)))
+                return math.sqrt(abs2(cross(d,self.t)))
             else:
                 return abs(dot(d,n))/math.sqrt(abs2(n))
         else:
@@ -189,7 +190,7 @@ class Plane:
             raise RuntimeError("Invalid arguments to Plane()")
         if len(points) == 3:
             self.r = points[0].r
-            n = numpy.cross(points[1].r - points[0].r,
+            n = cross(points[1].r - points[0].r,
                             points[2].r - points[0].r)
             if abs2(n) < 1e-28:
                 raise RuntimeError("Degenerate points in Plane()")
@@ -198,7 +199,7 @@ class Plane:
             self.r, A = pointset_mass_distribution(points)
             # again assume that the vectors are sorted by value
             val, vec = numpy.linalg.eigh(A)
-            self.n = numpy.asarray(vec[:,0]).reshape(3)
+            self.n = asarray(vec[:,0]).reshape(3)
         else:
             raise RuntimeError("Too few arguments to Plane()")
     def points(self):
@@ -253,7 +254,7 @@ class Movement:
             self.dr = p.r - from_obj.r
         elif isinstance(from_obj,Line) and isinstance(to_obj,Line):
             if dot(from_obj.t,to_obj.t) < 1 - 1e-14:
-                self.q = qrotor(numpy.cross(from_obj.t,to_obj.t),
+                self.q = qrotor(cross(from_obj.t,to_obj.t),
                                 math.acos(dot(from_obj.t,to_obj.t)))
                 self.dr = orthogonalized_to(to_obj.r - qrotate(self.q,from_obj.r),to_obj.t)
             else:
@@ -263,7 +264,7 @@ class Movement:
             return Movement.__init__(self,from_obj,lp)
         elif isinstance(from_obj,Plane) and isinstance(to_obj,Plane):
             if dot(from_obj.n,to_obj.n) < 1 - 1e-14:
-                self.q = qrotor(numpy.cross(from_obj.n,to_obj.n),
+                self.q = qrotor(cross(from_obj.n,to_obj.n),
                                 math.acos(dot(from_obj.n,to_obj.n)))
                 self.dr = to_obj.r - qrotate(self.q,from_obj.r)
             else:
@@ -296,3 +297,7 @@ class Movement:
         return mnew
     def is_pure_translation(self):
         return self.q == None or abs(self.q[0] - 1) < 1e-12
+
+
+# Expose only some parts to from geo import *
+__all__ = ["use_degrees","use_radians","Point","Line","Plane","Movement"]
