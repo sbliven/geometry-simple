@@ -1,6 +1,9 @@
 from numpy import *
 import math, numpy.linalg, copy
 
+# Expose only some parts to "from geo import *"
+__all__ = ["use_degrees","use_radians","Point","Line","Plane","Movement"]
+
 angular_unit = 1.0
 
 def use_degrees():
@@ -21,6 +24,7 @@ def normalized(x):
     return x/math.sqrt(abs2(x))
 
 def orthogonalized_to(x,d):
+    """Return a copy of x orthogonalized to d != 0"""
     d = normalized(d)
     return x - dot(x,d)*d
 
@@ -93,9 +97,12 @@ class Point:
         else:
             p = self.projected_on(obj)
             return self.distance_to(p)
-    def povstring(self, radius = 0.1, color = "rgb <0,0,0>"):
-        return """sphere{ <%g, %g, %g>, %g texture{pigment{%s}}}
-        """ % (self.r[0],self.r[1],self.r[2],radius,color)
+    def midpoint_to(self,obj):
+        """Return a point in the middle of the shortest line connecting this and obj."""
+        if isinstance(obj,Point):
+            return Point(0.5*(self.r + obj.r))
+        else:
+            return obj.midpoint_to(self)
 
 def pointset_mass_distribution(points):
     cm = zeros((1,3))
@@ -163,6 +170,24 @@ class Line:
             return angular_unit*(math.pi/2 - math.acos(min(1,abs(dot(self.t,obj.n)))))
         else:
             raise RuntimeError("Cannot calculate angle to object of this type")
+    def midpoint_to(self,obj):
+        """Return a point in the middle of the shortest line connecting this and obj."""
+        if isinstance(obj,Point):
+            return obj.midpoint_to(obj.projected_on(self))
+        elif isinstance(obj,Line):
+            d = obj.r - self.r
+            t1t2 = dot(self.t,obj.t)
+            if abs(abs(t1t2)-1) < 1e-12: #parallel case                
+                d = orthogonalized_to(d,self.t)
+                return Point(self.r + 0.5*d)
+            else:
+                t1d = dot(d,self.t)
+                t2d = dot(d,obj.t)
+                s = (t1t2*t2d - t1d)/(t1t2**2-1)
+                u = (t1t2*t1d - t2d)/(t1t2**2-1)
+                return Point(0.5*(obj.r + u*obj.t  + self.r + s*self.t))                
+        else:
+            return obj.midpoint_to(self)
     def __repr__(self):
         p = self.points()
         return "Line(%s, %s)" % (repr(p[0]),repr(p[1]))
@@ -220,6 +245,18 @@ class Plane:
             return angular_unit*math.acos(min(1,abs(dot(self.n,obj.n))))
         else:
             raise RuntimeError("Cannot calculate angle to object of this type")
+    def midpoint_to(self,obj):
+        """Return a point in the middle of the shortest line connecting this and obj."""
+        if isinstance(obj,Point):
+            return obj.midpoint_to(obj.projected_on(self))
+        elif isinstance(obj,Line):
+            if abs(abs(dot(self.n,obj.t)) - 1) < 1e-12: #line normal to the plane
+                d = orthogonalized_to(obj.r - self.r,self.n)
+                return Point(self.r+d)
+            else:
+                return obj.midpoint_to(obj.projected_on(self))
+        else:
+            raise NotImplemented("Plane-Plane midpoint not implemented")
     def normal(self):
         """Return a line normal to the plane"""
         return Line(Point(self.r),Point(self.r+self.n))
@@ -299,5 +336,4 @@ class Movement:
         return self.q == None or abs(self.q[0] - 1) < 1e-12
 
 
-# Expose only some parts to from geo import *
-__all__ = ["use_degrees","use_radians","Point","Line","Plane","Movement"]
+
