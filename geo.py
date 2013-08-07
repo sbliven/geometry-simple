@@ -1,35 +1,68 @@
+"""Geometry-simple
+
+http://code.google.com/p/geometry-simple/
+
+Created by uekstrom
+"""
+#The MIT License (MIT)
+#
+#Copyright (c) <year> <copyright holders>
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in
+#all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#THE SOFTWARE.
+
 from numpy import *
 import math, numpy.linalg, copy
 
 # Expose only some parts to "from geo import *"
 __all__ = ["use_degrees","use_radians","Point","Line","Plane","Movement"]
 
-angular_unit = 1.0
+angular_unit = 1.0 #units/radian
 
 def use_degrees():
+    """ Use degrees for all geo functions """
     global angular_unit
     angular_unit = 180.0/math.pi
 
 def use_radians():
+    """ Use radians for all geo functions (default)"""
     global angular_unit
     angular_unit = 1.0
 
 def dot(x,y):
+    """ Dot product of arrays x and y"""
     return inner(x,y)
 
 def abs2(x):
+    """ 2-norm of array x """
     return sum(x**2)
 
 def normalized(x):
+    """ normalize array x to length 1"""
     return x/math.sqrt(abs2(x))
 
 def orthogonalized_to(x,d):
-    """Return a copy of x orthogonalized to d != 0"""
+    """Return a copy of array x orthogonalized to array d != 0"""
     d = normalized(d)
     return x - dot(x,d)*d
 
 def dual(v):
-    """Return two unit vectors orthogonal to v"""
+    """Return two unit vectors orthogonal to array v"""
     if abs2(v) > 1e-20:
         if v[0] < 0.7:
             n1 = normalized(orthogonalized_to(array([1,0,0],'d'),v))
@@ -199,6 +232,11 @@ class Line:
         return Plane(Point(self.r),Point(self.r + d[0]), Point(self.r + d[1]))
 
 class Plane:
+    """ Represents a 3D plane
+
+    Stored internally as a point (self.r) and a normal vector (self.n)
+    """
+
     def __init__(self, *points):
         """Create a plane from at least three points. Accepts either
         three points or a list of points. If more than three points
