@@ -93,7 +93,7 @@ def qrotor(axis,angle):
     axis = math.sin(angle/2)*normalized(axis)
     return array([math.cos(angle/2), axis[0], axis[1], axis[2]])
 
-class Point:
+class Point(object):
     def __init__(self, *x_or_xyz):
         """Create a point from a list of 3 coordinates or 3 individual
         coordinates."""
@@ -148,7 +148,7 @@ def pointset_mass_distribution(points):
         A += r.transpose()*r
     return asarray(cm).reshape(3),A
 
-class Line:
+class Line(object):
     def __init__(self, *points):
         """Create an infinite line from at least two points.
         Accepts either two points or a list of points. If more than
@@ -231,7 +231,7 @@ class Line:
         d = dual(self.t)
         return Plane(Point(self.r),Point(self.r + d[0]), Point(self.r + d[1]))
 
-class Plane:
+class Plane(object):
     """ Represents a 3D plane
 
     Stored internally as a point (self.r) and a normal vector (self.n)
@@ -250,7 +250,8 @@ class Plane:
                 points = points[0].points() + [points[1]]
             elif isinstance(points[1],Line) and isinstance(points[0],Point):
                 points = points[1].points() + [points[0]]
-            raise RuntimeError("Invalid arguments to Plane()")
+            else:
+                raise RuntimeError("Invalid arguments to Plane(%s)"%",".join([p.__class__.__name__ for p in points]))
         if len(points) == 3:
             self.r = points[0].r
             n = cross(points[1].r - points[0].r,
@@ -266,17 +267,24 @@ class Plane:
         else:
             raise RuntimeError("Too few arguments to Plane()")
     def points(self):
+        """ Return three points on the plane.
+
+        The first point defines an origin of the plane, while the second two
+        points form an orthogonal basis relative to the first point.
+        """
         d = dual(self.n)
         return [Point(self.r),Point(self.r + d[0]),Point(self.r + d[1])]
     def moved(self, m):
         p = self.points()
         return Plane(m.on_point(p[0]),m.on_point(p[1]),m.on_point(p[2]))
     def distance_to(self, obj):
+        """ Calculates the distance to a point """
         if isinstance(obj,Point):
             return obj.distance_to(self)
         else:
             raise RuntimeError("Will not calculate line-plane or plane-plane distance")
     def angle_to(self, obj):
+        """ Calculates the angle formed between this plane and another Plane or Line (0 to pi/4)"""
         if isinstance(obj,Line):
             return obj.angle_to(self)
         elif isinstance(obj,Plane):
@@ -310,7 +318,11 @@ class Plane:
 
 
 
-class Movement:
+class Movement(object):
+    """ Represents an affine transform between two objects
+
+    Stored internally as a translation (self.dr) and a rotation quaternion (self.q)
+    """
     def __init__(self, from_obj, to_obj):
         """Create an affine transformation (rotation+translation) that
         takes from_obj to to_obj in some sense.
