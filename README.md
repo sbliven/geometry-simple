@@ -7,7 +7,7 @@ geometry-simple
 Dependencies
 ------------
 
-The library requires (numpy)[http://www.numpy.org] for the underlying linear algebra.
+The library requires [numpy](http://www.numpy.org) for the underlying linear algebra.
 
 
 Examples
