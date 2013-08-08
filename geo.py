@@ -171,7 +171,7 @@ class Line(object):
             self.r = r_cm
             self.r2 = r_cm + l*self.t
         else:
-            raise RuntimeError("Too few arguments to Line()")
+            raise ValueError("Too few arguments to Line()")
     def points(self):
         """Return two points defining the line"""
         return [Point(self.r),Point(self.r2)]
@@ -195,14 +195,14 @@ class Line(object):
         else:
             # Line-plane distance is only non-zero for exactly parallel objects
             # Because of numerical errors this is unlikely to happen, so always fail.
-            raise RuntimeError("Will not calculate line-plane distance")
+            raise ValueError("Will not calculate line-plane distance")
     def angle_to(self, obj):
         if isinstance(obj,Line):
             return angular_unit*math.acos(min(1,abs(dot(self.t,obj.t))))
         elif isinstance(obj,Plane):
             return angular_unit*(math.pi/2 - math.acos(min(1,abs(dot(self.t,obj.n)))))
         else:
-            raise RuntimeError("Cannot calculate angle to object of this type")
+            raise ValueError("Cannot calculate angle to object of this type")
     def midpoint_to(self,obj):
         """Return a point in the middle of the shortest line connecting this and obj."""
         if isinstance(obj,Point):
@@ -238,12 +238,20 @@ class Plane(object):
     """
 
     def __init__(self, *points):
-        """Create a plane from at least three points. Accepts either
-        three points or a list of points. If more than three points
-        are given the plane will be a least square fit of the point
-        set, in which case the (sign of the) normal is undefined."""
+        """Create a plane.
+        
+        Accepts multiple types of arguments, which can either be passed as
+        multiple arguments or as a list:
+         * A Line and a Point. Creates a Plane purpendicular to the line and
+           containing the point.
+         * 3 Points. Creates a Plane containing all three points
+         * >3 Points. Fit a plane to the points using linear regression. The
+           sign of the normal is undefined.
+        """
+        # accept arguments in a list
         if len(points) == 1:
             points = points[0]
+
         if len(points) == 2:
             # point and line
             if isinstance(points[0],Line) and isinstance(points[1],Point):
@@ -253,7 +261,7 @@ class Plane(object):
                 p = points[0]
                 l = points[1]
             else:
-                raise RuntimeError("Invalid arguments to Plane(%s)"%",".join([p.__class__.__name__ for p in points]))
+                raise ValueError("Invalid arguments to Plane(%s)"%",".join([p.__class__.__name__ for p in points]))
             self.r = p.r
             self.n = l.t
         elif len(points) == 3:
@@ -261,7 +269,7 @@ class Plane(object):
             n = cross(points[1].r - points[0].r,
                             points[2].r - points[0].r)
             if abs2(n) < 1e-28:
-                raise RuntimeError("Degenerate points in Plane()")
+                raise ValueError("Degenerate points in Plane()")
             self.n = normalized(n)
         elif len(points) > 3:
             self.r, A = pointset_mass_distribution(points)
@@ -269,7 +277,7 @@ class Plane(object):
             val, vec = numpy.linalg.eigh(A)
             self.n = asarray(vec[:,0]).reshape(3)
         else:
-            raise RuntimeError("Too few arguments to Plane()")
+            raise ValueError("Too few arguments to Plane()")
     def points(self):
         """ Return three points on the plane.
 
@@ -286,7 +294,7 @@ class Plane(object):
         if isinstance(obj,Point):
             return obj.distance_to(self)
         else:
-            raise RuntimeError("Will not calculate line-plane or plane-plane distance")
+            raise ValueError("Will not calculate line-plane or plane-plane distance")
     def angle_to(self, obj):
         """ Calculates the angle formed between this plane and another Plane or Line (0 to pi/4)"""
         if isinstance(obj,Line):
@@ -294,7 +302,7 @@ class Plane(object):
         elif isinstance(obj,Plane):
             return angular_unit*math.acos(min(1,abs(dot(self.n,obj.n))))
         else:
-            raise RuntimeError("Cannot calculate angle to object of this type")
+            raise ValueError("Cannot calculate angle to object of this type")
     def midpoint_to(self,obj):
         """Return a point in the middle of the shortest line connecting this and obj."""
         if isinstance(obj,Point):
@@ -386,7 +394,7 @@ class Movement(object):
             else:
                 self.dr = orthogonalized_to(to_obj.r - from_obj.r,to_obj.n)
         else:
-            raise TypeError("Invalid arguments to Movement()")
+            raise TypeError("Invalid arguments to Movement(%s,%s)"%(from_obj.__class__.__name__,to_obj.__class__.__name__))
     def on_point(self, p):
         """Private function to move points"""
         r = p.r

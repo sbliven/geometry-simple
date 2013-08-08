@@ -34,7 +34,14 @@ import unittest
 
 class GeoTest(unittest.TestCase):
 
+    def assertListAlmostEqual(self,first, second, places=7, msg=None, delta=None):
+        self.assertEqual(len(first),len(second),msg)
+        for i in xrange(len(first)):
+            self.assertAlmostEqual(first[i],second[i],places,msg,delta)
+
     def setUp(self):
+        self.longMessage = True
+
         self.origin = Point(0,0,0)
         self.xaxis = Line(self.origin,Point(1,0,0))
         self.yaxis = Line(self.origin,Point(0,1,0))
@@ -56,8 +63,11 @@ class GeoTest(unittest.TestCase):
 
         # Point and line
         p = Plane(Point(1,1,1), Line(Point(5,0,5),Point(5,2,5)))
-        self.assertListEqual(list(p.r),[1,1,1],"Wrong origin")
-        self.assertListEqual(list(p.n),[0,1,0],"Wrong normal")
+        self.assertListAlmostEqual(list(p.r),[1,1,1],"Wrong origin")
+        self.assertListAlmostEqual(list(p.n),[0,1,0],"Wrong normal")
+        p = Plane(Line(Point(7,-2,5),Point(7,0,4)), Point(2,1,1) )
+        self.assertListAlmostEqual(list(p.r),[2,1,1],"Wrong origin")
+        self.assertListAlmostEqual(list(p.n),[0,2/sqrt(5),-1/sqrt(5)],"Wrong normal")
 
     def test_measurements(self):
         """ Test construction and measurements """
