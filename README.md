@@ -3,11 +3,15 @@ geometry-simple
 
 3D geometry library for python. The goal is to make geometric operations simple without a deep knowledge of linear algebra.
 
-== Dependencies ==
+
+Dependencies
+------------
 
 The library requires (numpy)[http://www.numpy.org] for the underlying linear algebra.
 
-== Examples ==
+
+Examples
+--------
 
 Import the library:
 
@@ -43,8 +47,8 @@ Easily apply affine transforms:
     Point(1,5,0).moved(rot90)
 
 
-
-== History ==
+History
+-------
 
 This library was created by uekstrom in 2008. The original code can be found at http://code.google.com/p/geometry-simple/
 
