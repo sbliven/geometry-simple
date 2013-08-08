@@ -8,7 +8,7 @@ geometry-simple
 Dependencies
 ------------
 
-The library requires [numpy](http://www.numpy.org) for the underlying linear algebra.
+The library requires numpy (http://www.numpy.org) for the underlying linear algebra.
 
 
 Examples
@@ -54,3 +54,4 @@ History
 This library was created by uekstrom in 2008. The original code can be found at http://code.google.com/p/geometry-simple/
 
 The code was expanded and moved to github by Spencer Bliven in 2013.
+
