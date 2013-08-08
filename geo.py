@@ -247,12 +247,16 @@ class Plane(object):
         if len(points) == 2:
             # point and line
             if isinstance(points[0],Line) and isinstance(points[1],Point):
-                points = points[0].points() + [points[1]]
+                p = points[1]
+                l = points[0]
             elif isinstance(points[1],Line) and isinstance(points[0],Point):
-                points = points[1].points() + [points[0]]
+                p = points[0]
+                l = points[1]
             else:
                 raise RuntimeError("Invalid arguments to Plane(%s)"%",".join([p.__class__.__name__ for p in points]))
-        if len(points) == 3:
+            self.r = p.r
+            self.n = l.t
+        elif len(points) == 3:
             self.r = points[0].r
             n = cross(points[1].r - points[0].r,
                             points[2].r - points[0].r)
@@ -326,6 +330,15 @@ class Movement(object):
     def __init__(self, from_obj, to_obj):
         """Create an affine transformation (rotation+translation) that
         takes from_obj to to_obj in some sense.
+
+        From    To      Movement
+        =====   =====   ========
+        Point   Point   Translate point onto point
+        Point   Line    Translate point onto closest point on line
+        Point   Plane   Translate point onto closest point on plane
+        Line    Line    Rotate line1 to be parallel to line2, then translate to superimpose
+        Line    Plane   Align line with its projection onto plane
+        Plane   Plane   Rotate plane1 to be parallel to plane2, then translate to superimpose
         """
         # self.dr is always defined
         self.q = None # rotation quaternion, if applicable
@@ -339,7 +352,11 @@ class Movement(object):
             # move point to nearest point in plane
             p = from_obj.projected_on(to_obj)
             self.dr = p.r - from_obj.r
+        elif isinstance(from_obj,Line) and isinstance(to_obj, Point):
+            Movement.__init__(self,to_obj,from_obj)
+            self.dr = -self.dr
         elif isinstance(from_obj,Line) and isinstance(to_obj,Line):
+            # superimpose lines
             if dot(from_obj.t,to_obj.t) < 1 - 1e-14:
                 self.q = qrotor(cross(from_obj.t,to_obj.t),
                                 math.acos(dot(from_obj.t,to_obj.t)))
@@ -347,15 +364,29 @@ class Movement(object):
             else:
                 self.dr = orthogonalized_to(to_obj.r - from_obj.r,to_obj.t)
         elif isinstance(from_obj,Line) and isinstance(to_obj,Plane):
+            # move line onto its projection in the plane
             lp = from_obj.projected_on(to_obj)
             return Movement.__init__(self,from_obj,lp)
+        elif isinstance(from_obj,Plane) and isinstance(to_obj,Point):
+            # inverse of Point to plane motion
+            Movement.__init__(self,to_obj,from_obj)
+            self.q = qconf(self.q)
+            self.dr = -qrotate(self.q,self.dr)
+        elif isinstance(from_obj,Plane) and isinstance(to_obj,Line):
+            # inverse of Point to line motion
+            Movement.__init__(self,to_obj,from_obj)
+            self.q = qconf(self.q)
+            self.dr = -qrotate(self.q,self.dr)
         elif isinstance(from_obj,Plane) and isinstance(to_obj,Plane):
+            # superimpose planes
             if dot(from_obj.n,to_obj.n) < 1 - 1e-14:
                 self.q = qrotor(cross(from_obj.n,to_obj.n),
                                 math.acos(dot(from_obj.n,to_obj.n)))
                 self.dr = to_obj.r - qrotate(self.q,from_obj.r)
             else:
                 self.dr = orthogonalized_to(to_obj.r - from_obj.r,to_obj.n)
+        else:
+            raise TypeError("Invalid arguments to Movement()")
     def on_point(self, p):
         """Private function to move points"""
         r = p.r

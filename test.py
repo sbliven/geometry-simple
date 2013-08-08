@@ -44,6 +44,21 @@ class GeoTest(unittest.TestCase):
         self.l = Line(self.p1,self.p2)
         self.xy_plane = Plane(self.origin,Point(1,0,0),Point(0,1,0))
 
+    def test_Plane_construction(self):
+        # y=1 plane
+        p = Plane(Point(1,1,1), Point(2,1,0), Point(3,1,3))
+        self.assertListEqual(list(p.r),[1,1,1],"Wrong origin")
+        self.assertListEqual(list(p.n),[0,-1,0],"Wrong normal")
+        # Opposite orientation
+        p = Plane(Point(1,1,1), Point(3,1,3), Point(2,1,0))
+        self.assertListEqual(list(p.r),[1,1,1],"Wrong origin")
+        self.assertListEqual(list(p.n),[0,1,0],"Wrong normal")
+
+        # Point and line
+        p = Plane(Point(1,1,1), Line(Point(5,0,5),Point(5,2,5)))
+        self.assertListEqual(list(p.r),[1,1,1],"Wrong origin")
+        self.assertListEqual(list(p.n),[0,1,0],"Wrong normal")
+
     def test_measurements(self):
         """ Test construction and measurements """
 
