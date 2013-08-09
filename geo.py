@@ -28,6 +28,7 @@ Created by uekstrom
 
 from numpy import *
 import math, numpy.linalg, copy
+import fractions
 
 # Expose only some parts to "from geo import *"
 __all__ = ["use_degrees","use_radians","Point","Line","Plane","Movement"]
@@ -49,7 +50,7 @@ def dot(x,y):
     return inner(x,y)
 
 def abs2(x):
-    """ 2-norm of array x """
+    """ the sum of squares of array x """
     return sum(x**2)
 
 def normalized(x):
@@ -172,16 +173,20 @@ class Line(object):
             self.r2 = r_cm + l*self.t
         else:
             raise ValueError("Too few arguments to Line()")
+
     def points(self):
         """Return two points defining the line"""
         return [Point(self.r),Point(self.r2)]
+
     def moved(self, m):
         p = self.points()
         return Line(m.on_point(p[0]),m.on_point(p[1]))
+
     def projected_on(self, plane):
         p = self.points()
         return Line(p[0].projected_on(plane),
                     p[1].projected_on(plane))
+
     def distance_to(self, obj):
         if isinstance(obj,Point):
             return obj.distance_to(self)
@@ -196,6 +201,7 @@ class Line(object):
             # Line-plane distance is only non-zero for exactly parallel objects
             # Because of numerical errors this is unlikely to happen, so always fail.
             raise ValueError("Will not calculate line-plane distance")
+
     def angle_to(self, obj):
         if isinstance(obj,Line):
             return angular_unit*math.acos(min(1,abs(dot(self.t,obj.t))))
@@ -203,6 +209,7 @@ class Line(object):
             return angular_unit*(math.pi/2 - math.acos(min(1,abs(dot(self.t,obj.n)))))
         else:
             raise ValueError("Cannot calculate angle to object of this type")
+
     def midpoint_to(self,obj):
         """Return a point in the middle of the shortest line connecting this and obj."""
         if isinstance(obj,Point):
@@ -221,11 +228,14 @@ class Line(object):
                 return Point(0.5*(obj.r + u*obj.t  + self.r + s*self.t))                
         else:
             return obj.midpoint_to(self)
+
     def __repr__(self):
         p = self.points()
         return "Line(%s, %s)" % (repr(p[0]),repr(p[1]))
+
     def __str__(self):
         return repr(self)
+
     def dual(self):
         """Return a plane such that plane.normal() == self"""
         d = dual(self.t)
@@ -278,6 +288,7 @@ class Plane(object):
             self.n = asarray(vec[:,0]).reshape(3)
         else:
             raise ValueError("Too few arguments to Plane()")
+
     def points(self):
         """ Return three points on the plane.
 
@@ -286,9 +297,11 @@ class Plane(object):
         """
         d = dual(self.n)
         return [Point(self.r),Point(self.r + d[0]),Point(self.r + d[1])]
+
     def moved(self, m):
         p = self.points()
         return Plane(m.on_point(p[0]),m.on_point(p[1]),m.on_point(p[2]))
+
     def distance_to(self, obj):
         """ Calculates the distance to a point """
         if isinstance(obj,Point):
@@ -303,6 +316,7 @@ class Plane(object):
             return angular_unit*math.acos(min(1,abs(dot(self.n,obj.n))))
         else:
             raise ValueError("Cannot calculate angle to object of this type")
+
     def midpoint_to(self,obj):
         """Return a point in the middle of the shortest line connecting this and obj."""
         if isinstance(obj,Point):
@@ -315,19 +329,88 @@ class Plane(object):
                 return obj.midpoint_to(obj.projected_on(self))
         else:
             raise NotImplemented("Plane-Plane midpoint not implemented")
+
     def normal(self):
         """Return a line normal to the plane"""
         return Line(Point(self.r),Point(self.r+self.n))
+
     def __repr__(self):
+        """ Three-point representation of a Plane """
         p = self.points()
         return "Plane(%s, %s, %s)" % (repr(p[0]),repr(p[1]),repr(p[2]))
+
     def __str__(self):
-        return repr(self)
+        """ Equation representation of the Plane. Tries to simplify
+        coefficients where possible. """
+        #degenerate cases: normal along an axis
+        absn = abs(self.n)
+        if absn[0] < 1e-14:
+            if absn[1] < 1e-14:
+                # normal to z
+                return "z = {}".format(self.r[2])
+            elif absn[2] < 1e-14:
+                # normal to y
+                return "y = {}".format(self.r[1])
+        elif absn[1] < 1e-14 and self.n[2] < 1e-14:
+            # normal to x
+            return "x = {}".format(self.r[0])
+
+        coefs = self.coef(100)
+        str = ""
+        for coef,var in zip(coefs,"xyz"):
+            if abs(coef)>0:
+                if str:
+                    if abs(coef) != 1:
+                        str += " {} {}*{}".format("+" if coef>=0 else "-", abs(coef), var)
+                    else:
+                        str += " {} {}".format("+" if coef>=0 else "-", var)
+                else:
+
+                    if abs(coef) != 1:
+                        str += "{}*{}".format(coef,var)
+                    else:
+                        str += var
+        str += " = {}".format(coefs[3])
+        return str
+
     def separates(self,p1,p2):
         """Test if the plane separates (is inbetween) two points"""
         return dot(p1.r - self.r,self.n)*dot(p2.r - self.r,self.n) < 0
 
+    def coef(self,maxcoef=None):
+        """coef(array,int) -> array
+        Returns a tuple with coefficients (a,b,c,d) which satisfy the equation
 
+            ax+by+cz=d.
+
+        Since the coordinates can be scaled arbitrarily, by default they are
+        normalized such that sqrt(a**2 + b**2 + c**2) = 1, where the sign is
+        chosen based on the orientation of the plane.
+
+        As an alternative, when maxcoef is specified the method attempts to
+        find integer coefficients which approximate the plane. If the real
+        coefficients of the plane are irrational or greater than maxcoef, the
+        method will give up and return real-valued coefficients.
+        """
+        tol = 1e-14 #machine precision
+
+        n = append(self.n,dot(self.n,self.r)) #real-valued abcd
+        if maxcoef > 0:
+            nr = n*max(abs(n)) # should be rational: [a,b,c]/|v|^2*max(a,b,c)
+            nf = [fractions.Fraction(c).limit_denominator(maxcoef**2) for c in nr]
+            if all([abs(nr[i]-nf[i])<tol for i in xrange(len(nr))]):
+                #Good rational approximation for all coef
+                factor = reduce(fractions.gcd, nf )
+                vi = [f/factor for f in nf]
+                assert( all([f.denominator == 1 for f in vi]) )
+                n = array([f.numerator for f in vi])
+            #No rational approximation, so use real
+
+        # make first coef positive by convention
+        if n[0] < 0:
+            n = -n
+
+        return n
 
 
 class Movement(object):

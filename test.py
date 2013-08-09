@@ -34,7 +34,7 @@ import unittest
 
 class GeoTest(unittest.TestCase):
 
-    def assertListAlmostEqual(self,first, second, places=7, msg=None, delta=None):
+    def assertListAlmostEqual(self,first, second, msg=None, places=7, delta=None):
         self.assertEqual(len(first),len(second),msg)
         for i in xrange(len(first)):
             self.assertAlmostEqual(first[i],second[i],places,msg,delta)
@@ -110,6 +110,36 @@ class GeoTest(unittest.TestCase):
         self.assertAlmostEqual(self.xaxis.moved(mr).distance_to(self.yaxis),0)
         self.assertAlmostEqual(self.origin.moved(mr).distance_to(self.origin),0)
 
+    def test_coef(self):
+        """ Test the coef method """
+        p = Plane(self.origin,Point(1,0,0),Point(0,1,0))
+        r = (0,0,1,0)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
+
+        p = Plane(Point(1,1,1),Point(5,1,0),Point(0,1,-8))
+        r = (0,1,0,1)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
+
+        p = Plane(Point(-5,1,1),Point(-5,1,0),Point(-5.00000000,2,-8))
+        r = (1,0,0,-5)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
+
+        p = Plane(Point(1,1,1),Point(1,1,0),Point(2,0,1))
+        r = (1,1,0,2)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
+        p = Plane(Point(0,0,0),Point(-1,1,0),Point(0,-1,1))
+        r = (1,1,1,0)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
+        #opposite orientation
+        p = Plane(Point(0,0,0),Point(0,-1,1),Point(-1,1,0))
+        r = (1,1,1,0)
+        c = p.coef(100)
+        self.assertListAlmostEqual(c,r,"Expected coef {0}, got {1} for {2}".format(r,c,p))
 
 if __name__ == '__main__':
     unittest.main()
