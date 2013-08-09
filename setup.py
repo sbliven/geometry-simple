@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-with open('README') as readme:
+with open('README.md') as readme:
     long_description = readme.read()
 
 name = 'geometry-simple'
