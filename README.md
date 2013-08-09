@@ -2,13 +2,15 @@
 geometry-simple
 ===============
 
-3D geometry library for python. The goal is to make geometric operations simple without a deep knowledge of linear algebra.
+3D geometry library for python. The goal is to make geometric operations simple
+without a deep knowledge of linear algebra.
 
 
 Installation
 ------------
 
-Download the latest version of the package from https://github.com/sbliven/geometry-simple/dist/
+Download the latest version of the package from
+https://raw.github.com/sbliven/geometry-simple/master/dist/geometry-simple-0.2.tar.gz
 
 In the resulting package, run
 
@@ -20,7 +22,8 @@ This will install the package for all users.
 Dependencies
 ------------
 
-The library requires numpy (http://www.numpy.org) for the underlying linear algebra.
+The library requires numpy (http://www.numpy.org) for the underlying linear
+algebra.
 
 
 Examples
@@ -63,7 +66,8 @@ Easily apply affine transforms::
 History
 -------
 
-This library was created by uekstrom in 2008. The original code can be found at http://code.google.com/p/geometry-simple/
+This library was created by uekstrom in 2008. The original code can be found at
+http://code.google.com/p/geometry-simple/
 
 The code was expanded and moved to github by Spencer Bliven in 2013.
 
