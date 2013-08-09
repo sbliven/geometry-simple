@@ -5,6 +5,18 @@ geometry-simple
 3D geometry library for python. The goal is to make geometric operations simple without a deep knowledge of linear algebra.
 
 
+Installation
+------------
+
+Download the latest version of the package from https://github.com/sbliven/geometry-simple/dist/
+
+In the resulting package, run
+
+    sudo python setup.py install
+
+This will install the package for all users.
+
+
 Dependencies
 ------------
 
