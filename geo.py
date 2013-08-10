@@ -411,6 +411,17 @@ class Plane(object):
             n = -n
 
         return n
+    def orientation(self,point):
+        """ orientation(Point) -> int
+
+        Returns 1,0, or -1 based on whether the input point is above, on, or
+        below the given plane. The orientation of the plane depends on its
+        conditions at creation, but should remain consistent following
+        movements.
+        """
+        p = point.r - self.r #vector from our origin to the point
+        d = dot(self.n,p)
+        return int(sign(d))
 
 
 class Movement(object):
