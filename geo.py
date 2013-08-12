@@ -150,6 +150,11 @@ def pointset_mass_distribution(points):
     return asarray(cm).reshape(3),A
 
 class Line(object):
+    """A 3D Line.
+
+    Stored internally as two points on the line (r and r2), as well as a
+    direction vector (t)
+    """
     def __init__(self, *points):
         """Create an infinite line from at least two points.
         Accepts either two points or a list of points. If more than
@@ -329,6 +334,10 @@ class Plane(object):
                 return obj.midpoint_to(obj.projected_on(self))
         else:
             raise NotImplemented("Plane-Plane midpoint not implemented")
+
+    def project(self,obj):
+        """ Projects a point or line onto this plane """
+        return obj.projected_on(self)
 
     def normal(self):
         """Return a line normal to the plane"""
