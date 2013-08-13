@@ -615,4 +615,53 @@ class Movement(object):
         return self.q == None or abs(self.q[0] - 1) < 1e-12
 
 
+class CylindricalReference(object):
+    """A cylindrical frame of reference.
+
+    Interprets the position of points as tuples (r,t,h) instead of (x,y,z):
+     * radial distance to the z axis
+     * azimuth from the x-axis to the projection of the point in the xy plane
+     * distance to the xy plane
+
+    Internally stores the origin (self.r), the direction of the first axis
+    (self.x), and the normal (self.n)
+    """
+    def __init__(self,*args):
+        """ Initialize this reference frame from:
+         * Three Points, giving the origin, a point along the reference axis,
+           and another point on the reference plane
+         * A Point, a Line, and a Plane, giving the origin, reference axis
+           direction, and reference plane
+         * A Plane, which provides the reference plane. The plane's points()
+           method is used to determine the specific coordinate system, which is
+           not rigorously defined but which produces the expected reference
+           frame for common planes like those perpendicular to an axis. Use one
+           of the other constructors if the reference direction is important.
+        """
+        if len(args) == 3 and all([isinstance(p,Point) for p in args]):
+            # Three points
+            self.r = array(args[0].r)
+            self.x = normalized(array(args[1].r)-self.r)
+            n = cross(points[1].r - points[0].r,
+                            points[2].r - points[0].r)
+            if abs2(n) < 1e-28:
+                raise ValueError("Degenerate points in Plane()")
+            self.n = normalized(n)
+        elif len(args) == 3 and
+                isinstance(args[0],Point) and
+                isinstance(args[1],Line) and
+                isinstance(args[2],Plane):
+            # Point, Line, Plane
+            self.r = args[0].r
+            self.x = args[1].t
+            self.n = args[2].n
+        elif len(args) == 1 and isinstance(args[0],Plane):
+            self.__init__(args[0].points())
+        else:
+            raise ValueError("Invalid arguments")
+
+    def from_cartesian(self,point):
+        """Converts a cartesian Point to a tuple (r,t,h) in this reference frame"""
+        pass
+
 
