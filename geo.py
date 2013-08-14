@@ -104,19 +104,17 @@ class Point(object):
             self.r = array(x_or_xyz[0],'d')
         else:
             raise TypeError("Invalid arguments to Point()")
-    def moved(self, m):
-        return m.on_point(self)
-    def distance_to(self, obj):
-        if isinstance(obj,Point):
-            return math.sqrt(abs2(self.r - obj.r))
-        else:
-            raise TypeError("Invalid type in Point.distance_to()")
     def __str__(self):
         return "(%g, %g, %g)" % tuple(map(float,self.r))
     def __repr__(self):
         return "Point(%g, %g, %g)" % tuple(map(float,self.r))
+
     def coordinates(self):
         return map(float,self.r)
+
+    def moved(self, m):
+        return m.on_point(self)
+
     def projected_on(self, obj):
         if isinstance(obj,Line):
             return Point(obj.r + dot(obj.t,self.r - obj.r)*obj.t)
@@ -125,12 +123,16 @@ class Point(object):
             return Point(obj.r + orthogonalized_to(dr,obj.n))
         else:
             raise TypeError("Cannot project point onto object")
+
     def distance_to(self, obj):
+        # Point-Point distance
         if isinstance(obj,Point):
             return math.sqrt(abs2(self.r - obj.r))
         else:
+            #Point-Line and Point-Plane through projected_on
             p = self.projected_on(obj)
             return self.distance_to(p)
+
     def midpoint_to(self,obj):
         """Return a point in the middle of the shortest line connecting this and obj."""
         if isinstance(obj,Point):
@@ -194,18 +196,22 @@ class Line(object):
 
     def distance_to(self, obj):
         if isinstance(obj,Point):
+            # Point-Line implemented by Point
             return obj.distance_to(self)
         elif isinstance(obj,Line):
+            # Line-Line
             d = obj.r - self.r
             n = cross(self.t,obj.t)
             if abs2(n) < 1e-16: # parallel lines
                 return math.sqrt(abs2(cross(d,self.t)))
             else:
                 return abs(dot(d,n))/math.sqrt(abs2(n))
+        elif isinstance(obj,Plane):
+            # Line-Plane
+            l = self.projected_on(obj)
+            return self.distance_to(l)
         else:
-            # Line-plane distance is only non-zero for exactly parallel objects
-            # Because of numerical errors this is unlikely to happen, so always fail.
-            raise ValueError("Will not calculate line-plane distance")
+            raise ValueError("Invalid argument")
 
     def angle_to(self, obj):
         if isinstance(obj,Line):
@@ -309,10 +315,18 @@ class Plane(object):
 
     def distance_to(self, obj):
         """ Calculates the distance to a point """
-        if isinstance(obj,Point):
+        if isinstance(obj,Point) or isinstance(obj,Line):
+            # Point-Plane and Line-Plane already implemented
             return obj.distance_to(self)
+        elif isinstance(obj,Plane):
+            if self.angle_to(obj) < 1e-16:
+                return obj.distance_to(Point(self.r))
+            else:
+                #parallel
+                return 0.0
         else:
-            raise ValueError("Will not calculate line-plane or plane-plane distance")
+            raise TypeError("Invalid type")
+
     def angle_to(self, obj):
         """ Calculates the angle formed between this plane and another Plane or Line (0 to pi/4)"""
         if isinstance(obj,Line):

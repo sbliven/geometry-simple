@@ -80,6 +80,26 @@ class GeoTest(unittest.TestCase):
 
         self.assertAlmostEqual(self.l.angle_to(self.xy_plane),pi/4)
 
+        #equivalent lines
+        l1 = Line(Point(0,0,0),Point(1,1,1))
+        l2 = Line(Point(-4,-4,-4),Point(-5,-5,-5))
+        self.assertAlmostEqual(l1.distance_to(l2),0.)
+        self.assertAlmostEqual(l1.angle_to(l2),0.)
+
+        #equivalent planes
+        p1 = Plane(Point(0,0,1),Point(1,1,1),Point(1,2,1))
+        p2 = Plane(Point(0,0,1),Point(1,0,1),Point(0,1,1))
+        p3 = Plane(Point(0,0,1),Point(0,1,1),Point(1,0,1))
+        self.assertAlmostEqual(p1.distance_to(p2),0.)
+        self.assertAlmostEqual(p1.distance_to(p3),0.)
+        self.assertAlmostEqual(p1.angle_to(p2),0.)
+        self.assertAlmostEqual(p1.angle_to(p3),0.)
+        
+        for p in p1.points():
+            self.assertAlmostEqual(p2.distance_to(p),0,"p2 doesn't contain %s"%p)
+            self.assertAlmostEqual(p3.distance_to(p),0,"p3 doesn't contain %s"%p)
+
+
     def test_lfit(self):
         """ Make sure that the fitted line coincides with l for three points on l. """
         Lfit = Line(self.p1,self.p2,Point(1,0.5,0.5))
@@ -102,13 +122,44 @@ class GeoTest(unittest.TestCase):
         """ test movements """
 
         # pure translation
-        mt = Movement(self.origin,self.p1)
-        self.assertAlmostEqual(self.p1.moved(mt).distance_to(self.origin),2*self.p1.distance_to(self.origin))
+        #Point->Point
+        m = Movement(self.origin,self.p1)
+        result = Point(3,4,5.5).moved(m)
+        expected = Point(4,5,6.5)
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
+        #Line->Point
+        m = Movement(self.xaxis,self.p1) # rotate self.xaxis onto self.yaxis
+        result = Point(3,4,5.5).moved(m)
+        expected = Point(3,5,6.5)
+        self.assertListAlmostEqual(m.dr,[0,1,1])
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
+        result = self.yaxis.moved(m)
+        expected = Line(Point(0,0,1),Point(0,1,1))
+        self.assertAlmostEqual(result.distance_to(expected),0.)
+        self.assertAlmostEqual(result.angle_to(expected),0.)
 
-        #pure rotation
-        mr = Movement(self.xaxis,self.yaxis) # rotate self.xaxis onto self.yaxis
-        self.assertAlmostEqual(self.xaxis.moved(mr).distance_to(self.yaxis),0)
-        self.assertAlmostEqual(self.origin.moved(mr).distance_to(self.origin),0)
+        # pure rotation
+        #Line->Line
+        m = Movement(self.xaxis,self.yaxis) # rotate self.xaxis onto self.yaxis
+        result = Point(3,4,5.5).moved(m)
+        expected = Point(-4,3,5.5)
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
+        self.assertAlmostEqual(self.xaxis.moved(m).distance_to(self.yaxis),0)
+        self.assertAlmostEqual(self.origin.moved(m).distance_to(self.origin),0)
+
+
+
+        # Both
+        #Line->Line
+        m = Movement(self.xaxis,Line(Point(0,0,1),Point(0,1,1))) # rotate self.xaxis onto self.yaxis
+        result = Point(3,4,5.5).moved(m)
+        expected = Point(-4,3,6.5)
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
+
+
+        #TODO Plane-Plane
+
+
 
     def test_coef(self):
         """ Test the coef method """
