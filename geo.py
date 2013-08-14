@@ -662,6 +662,27 @@ class CylindricalReference(object):
 
     def from_cartesian(self,point):
         """Converts a cartesian Point to a tuple (r,t,h) in this reference frame"""
-        pass
+        # Convert into local cartesian coordinates
+        x,y,z = point.r #TODO
+
+        r = sqrt(x*x+y*y)
+        h = z
+        if x == 0 and y == 0:
+            t = 0
+        elif x >= 0:
+            t = asin( y/r )
+        else:
+            t = pi - asin( y/r )
+
+        return (r, t*angular_unit, h)
+
+    det to_cartesian(self, point):
+        """Converts a cylindrical tuple (r,t,h) to standard x,y,z coordinates"""
+        r,t,h = point
+        x = r*cos(t)
+        y = r*sin(t)
+        z = h
+
+        #TODO convert back to reference frame
 
 
