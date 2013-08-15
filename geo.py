@@ -509,8 +509,7 @@ class Plane(object):
                 return obj
             else:
                 return None
-        else:
-            raise TypeError("Invalid argument. Expect Point, Line, or Plane, but found %s"%obj.__type__)
+        raise TypeError("Invalid argument. Expect Point, Line, or Plane, but found %s"%obj.__type__)
 
 
 class Movement(object):
