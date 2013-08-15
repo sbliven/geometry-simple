@@ -45,6 +45,10 @@ def use_radians():
     global angular_unit
     angular_unit = 1.0
 
+
+# linear algebra helper functions 
+# These take numpy arrays as input
+
 def dot(x,y):
     """ Dot product of arrays x and y"""
     return inner(x,y)
@@ -58,9 +62,12 @@ def normalized(x):
     return x/math.sqrt(abs2(x))
 
 def orthogonalized_to(x,d):
-    """Return a copy of array x orthogonalized to array d != 0"""
-    d = normalized(d)
-    return x - dot(x,d)*d
+    """Return the component of array x orthogonal to array d != 0"""
+    return x - parallel_to(x,d)
+
+def parallel_to(x,d):
+    """Return the component of x parallel to d"""
+    return dot(x,d)/abs2(d)*d
 
 def dual(v):
     """Return two unit vectors orthogonal to array v"""
@@ -87,12 +94,28 @@ def qconj(q):
     return qc
 
 def qrotate(q,v):
+    """qrotate(array(4),array(3)) -> array(3)
+
+    Apply the rotation specified by quaternion q to vector v
+
+        v' = qv(q*)
+    """
     qv = array([0,v[0],v[1],v[2]])
     return qmul(q,qmul(qv,qconj(q)))[1:]
 
 def qrotor(axis,angle):
+    """qrotor(array(3),float)->array(4)
+    get the rotation quaternion for a rotation by angle (in radians) around
+    the axis defined by array axis
+    
+    the rotation quaternion q is given by
+      q = cos(angle/2) + ( axis[0]*i + axis[1]*j + axis[2]*k )*sin(angle/2)
+    """
     axis = math.sin(angle/2)*normalized(axis)
     return array([math.cos(angle/2), axis[0], axis[1], axis[2]])
+
+# Public classes
+
 
 class Point(object):
     def __init__(self, *x_or_xyz):
@@ -320,9 +343,10 @@ class Plane(object):
             return obj.distance_to(self)
         elif isinstance(obj,Plane):
             if self.angle_to(obj) < 1e-16:
+                #parallel
                 return obj.distance_to(Point(self.r))
             else:
-                #parallel
+                #intersecting
                 return 0.0
         else:
             raise TypeError("Invalid type")
@@ -445,6 +469,48 @@ class Plane(object):
         p = point.r - self.r #vector from our origin to the point
         d = dot(self.n,p)
         return int(sign(d))
+    def intersection(self,obj):
+        """ Get the intersection of this Plane with another object.
+        The intersection may be a Plane, Line, Point, or None
+        """
+
+        if isinstance(obj,Plane):
+            if self.angle_to(obj) < 1e-14:
+                #parallel
+                if self.distance_to(obj) <1e-14:
+                    #co-incident
+                    return self
+                else:
+                    return None
+            else:
+                #intersecting
+                a = cross(self.n,obj.n) #normal of the resulting line
+
+                #Find a point on the line
+                zerocol = max(zip(abs(a),range(3)))[1] #index of largest component
+
+                # 2x2 matrix formed from normals, ommitting zerocol
+                # Since we know they intersect, should be well-determined
+                m = array([(self.n[i],obj.n[i]) for i in xrange(3) if i != zerocol]).T
+                b1 = dot(self.n,self.r)
+                b2 = dot(obj.n,obj.r)
+                sol = linalg.solve(m,array([b1,b2]))
+
+                # Add 0 in to the solution in the right place
+                #pt = [sol[i] if i<zerocol else (0 if i==zerocol else sol[i-1]) for i in xrange(3)]
+                pt = concatenate((sol[:zerocol],[0.],sol[zerocol:]))
+                pt = array(pt)
+
+                return Line(Point(pt),Point(pt+a))
+        elif isinstance(obj,Line):
+            pass #TODO
+        elif isinstance(obj,Point):
+            if self.distance_to(obj) < 1e-14:
+                return obj
+            else:
+                return None
+        else:
+            raise TypeError("Invalid argument. Expect Point, Line, or Plane, but found %s"%obj.__type__)
 
 
 class Movement(object):
@@ -487,6 +553,7 @@ class Movement(object):
                                 math.acos(dot(from_obj.t,to_obj.t)))
                 self.dr = orthogonalized_to(to_obj.r - qrotate(self.q,from_obj.r),to_obj.t)
             else:
+                #TODO test this
                 self.dr = orthogonalized_to(to_obj.r - from_obj.r,to_obj.t)
         elif isinstance(from_obj,Line) and isinstance(to_obj,Plane):
             # move line onto its projection in the plane
@@ -505,15 +572,22 @@ class Movement(object):
         elif isinstance(from_obj,Plane) and isinstance(to_obj,Plane):
             # superimpose planes
             if dot(from_obj.n,to_obj.n) < 1 - 1e-14:
-                self.q = qrotor(cross(from_obj.n,to_obj.n),
-                                math.acos(dot(from_obj.n,to_obj.n)))
-                self.dr = to_obj.r - qrotate(self.q,from_obj.r)
+                # not parallel
+                l = from_obj.intersection(to_obj) # axis of rotation
+
+                self.q = qrotor(l.t, math.acos(dot(from_obj.n,to_obj.n)))
+                # l.r lies along the axis of rotation
+                self.dr = l.r - qrotate(self.q, l.r)
             else:
-                self.dr = orthogonalized_to(to_obj.r - from_obj.r,to_obj.n)
+                # parallel
+                self.dr = parallel_to(to_obj.r - from_obj.r,to_obj.n)
         else:
             raise TypeError("Invalid arguments to Movement(%s,%s)"%(from_obj.__class__.__name__,to_obj.__class__.__name__))
     def on_point(self, p):
-        """Private function to move points"""
+        """Private function to move points
+
+        p' = rotate(p) + dr
+        """
         r = p.r
         if self.q != None:
             r = qrotate(self.q,r)

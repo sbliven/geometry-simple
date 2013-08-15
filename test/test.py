@@ -27,6 +27,7 @@ Created by uekstrom
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #THE SOFTWARE.
 
+import geo
 from geo import *
 from math import *
 import unittest
@@ -137,6 +138,12 @@ class GeoTest(unittest.TestCase):
         expected = Line(Point(0,0,1),Point(0,1,1))
         self.assertAlmostEqual(result.distance_to(expected),0.)
         self.assertAlmostEqual(result.angle_to(expected),0.)
+        # Plane-Plane
+        m = Movement(self.xy_plane,Plane(Point(0,0,1),Point(0,1,1),Point(-1,0,1)) )
+        result = Point(3,4,5).moved(m)
+        expected = Point(3,4,6)
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
+
 
         # pure rotation
         #Line->Line
@@ -147,7 +154,21 @@ class GeoTest(unittest.TestCase):
         self.assertAlmostEqual(self.xaxis.moved(m).distance_to(self.yaxis),0)
         self.assertAlmostEqual(self.origin.moved(m).distance_to(self.origin),0)
 
+        #Plane->Plane
+        #45 deg rotation around x-axis
+        rotplane = Plane(self.origin,Point(1,0,0),Point(1,1,1))
+        m = Movement(self.xy_plane, rotplane )
+        result = Point(1,3,3).moved(m)
+        expected = Point(1,0,3*sqrt(2))
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
 
+        #Same plane, different orientation
+        rotplane = Plane(Point(1,1,1),Point(-10,0,0),Point(5,-5,-5))
+        m = Movement(self.xy_plane, rotplane )
+        result = Point(1,3,3).moved(m)
+        expected = Point(1,0,3*sqrt(2))
+        print result
+        self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
 
         # Both
         #Line->Line
@@ -157,9 +178,22 @@ class GeoTest(unittest.TestCase):
         self.assertListAlmostEqual(result.coordinates(),expected.coordinates())
 
 
-        #TODO Plane-Plane
+    def test_intersection(self):
+        """ Test intersection methods """
+        #Plane-Plane
+        p = Plane(Point(0,1,0),Point(1,1,0),Point(1,1,1))
+        result = self.xy_plane.intersection(p)
+        expected = Line(Point(0,1,0),Point(1,1,0))
+        self.assertAlmostEqual(result.angle_to(expected),0)
+        self.assertAlmostEqual(result.distance_to(expected),0)
 
+        p = Plane(Point(0,1,0),Point(2,1,1),Point(1,1,0))
+        result = self.xy_plane.intersection(p)
+        expected = Line(Point(0,1,0),Point(1,1,0))
+        self.assertAlmostEqual(result.angle_to(expected),0)
+        self.assertAlmostEqual(result.distance_to(expected),0)
 
+        #TODO
 
     def test_coef(self):
         """ Test the coef method """
